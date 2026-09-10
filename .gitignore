@@ -1,0 +1,18 @@
+# CEdev build products
+bin/
+obj/
+
+# Generated calculator package and local media
+dist/
+work/
+*.mp4
+*.mkv
+*.webm
+*.8xp
+*.8xv
+*.8xg
+
+# Python and macOS files
+__pycache__/
+*.py[cod]
+.DS_Store
