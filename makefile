@@ -6,8 +6,8 @@ DESCRIPTION = "Bad Apple 30FPS player"
 COMPRESSED = YES
 COMPRESSED_MODE = zx7
 
-CFLAGS = -Wall -Wextra -Oz
-CXXFLAGS = -Wall -Wextra -Oz
+CFLAGS = -Wall -Wextra -O2
+CXXFLAGS = -Wall -Wextra -O2
 
 ifeq ($(DEBUG),1)
 CFLAGS += -DBAD30_DEBUG

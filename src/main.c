@@ -527,7 +527,8 @@ int main(void) {
     if (!wait_until_frame(metadata.total_frames, &paused, &previous_2nd, &start, &pause_started)
         && !graphics_started) return 1;
 finished:
-    show_statistics();
+    /* Emergency keys still return directly to TI-OS. */
+    if (!kb_On && !(kb_Data[6] & kb_Clear)) show_statistics();
     cleanup();
     return 0;
 }

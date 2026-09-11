@@ -45,7 +45,8 @@ that playback is usable.
 3. Watch at least 60 seconds and note whether playback remains real-time.
 4. Check a segment transition and the final segment.
 5. Press `2nd` and confirm pause/resume leaves the current frame visible.
-6. Press `Mode` or `Clear` and confirm return to TI-OS.
+6. Press `Mode`, record the timing report, then press a fresh key to exit.
+   Confirm `Clear` returns immediately to TI-OS.
 7. Repeat with the `ON` key if safe to do so.
 8. Run a complete playback only after the short test succeeds.
 
@@ -53,3 +54,8 @@ The real-time mode may skip frames when the calculator falls behind. That is
 expected. Long freezes, a blank screen, missing rows, stale black pixels, CRC
 errors, or failure to return to TI-OS are not expected and should be reported
 with the exact on-screen symptom.
+
+For the 29 FPS target, record the complete-run 1% low, worst interval, sample
+count, skipped frames and starvation count. Exclude intentional pauses. A low
+percentile does not excuse a visible isolated freeze; both timing and visual
+checks must pass.

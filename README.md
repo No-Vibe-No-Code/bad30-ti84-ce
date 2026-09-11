@@ -17,15 +17,16 @@ until it has been fully decoded and rendered.
 - Independent 10-frame ZX7-compressed segments to limit blocking storage reads.
 - Complete-frame plus XOR-delta encoding for compact storage.
 - Metadata and per-segment CRC16 integrity checks.
-- Explicit black/white palette setup and full back-buffer clearing.
-- `2nd` pause/resume, `Mode` quit, `Clear` emergency quit, and `ON` emergency quit.
+- Explicit black/white palette setup and one-time clearing of both buffers.
+- Double-buffered segment prefetch and an on-calculator frame-time report.
+- `2nd` pause/resume, `Mode` timing report, `Clear` emergency quit, and `ON` emergency quit.
 - No audio and no network connection on the calculator.
 
 ## Repository layout
 
 ```text
 src/main.c             Calculator player and runtime validation
-src/zx7_fixed.s        Standard ZX7 decompressor used by BAD30
+src/zx7_stream.h       Bounded, resumable ZX7 decoder with fused CRC
 tools/encode_bad30.py  Host-side frame normalizer and AppVar encoder
 makefile               CEdev build definition
 icon.png               Program icon
@@ -112,3 +113,16 @@ the acceptance test.
 
 The existing `BADAPP2` installation is not part of this repository and should
 be kept as a rollback option until BAD30 has passed physical testing.
+
+## Performance validation
+
+The [performance plan](docs/PERFORMANCE_PLAN.md) defines the 29 FPS 1% low
+acceptance target. Host decoder and timing-recorder checks can be run with:
+
+```sh
+python3 tools/test_runtime.py "$CEDEV_ROOT/bin/convbin"
+```
+
+After playback (or Mode), BAD30 shows measured 1% low FPS, worst interval,
+skipped frames and buffer starvation. Clear and ON exit immediately. A build
+alone does not prove the target is met on hardware.

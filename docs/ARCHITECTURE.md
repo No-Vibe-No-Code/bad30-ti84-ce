@@ -59,39 +59,52 @@ checks that the AppVar exists, has the declared size, decompresses it, and
 checks its CRC. Any failure displays an error and exits through the normal
 cleanup path; partially decoded data is never presented.
 
-The renderer uses GraphX's 8-bit buffer and an explicit palette:
+The renderer uses GraphX's 8-bit buffer with index 0 black and index 255
+white. It clears both buffers once at initialization, then overwrites every
+pixel in the 288x192 video rectangle. Each source row expands through a lookup
+table once; two whole-row copies produce the remaining scaled rows. Borders
+remain white because playback never writes to them.
 
-- palette index 0 is black;
-- palette index 255 is white.
+## Real-time scheduler and segment preparation
 
-For each complete frame it waits for the safe draw-buffer boundary, clears the
-full 320×240 buffer to white, expands source bytes through a precomputed
-256-entry lookup table, writes three LCD rows per source row, and swaps only
-after the frame is complete. Clearing the full buffer prevents stale black
-pixels from surviving into later frames.
+Two 7680-byte buffers hold the current and next segments. Both are validated
+before the timeline starts. After each segment transition, the released slot
+receives the following segment. The read-only AppVar pointer remains valid
+until decoding finishes; no VAT-changing operations run while it is live.
 
-## Real-time scheduler
+The resumable ZX7 reader checks input bounds, output bounds and back-reference
+distances and updates the CRC as it produces output. Each background call emits
+at most 32 bytes. Calls run while waiting for a presentation deadline, with a
+two-millisecond guard. Token parsing is bounded, but the guard and batch size
+still require physical performance testing. Opening an AppVar remains a
+synchronous operation, and insufficient spare CPU time can still cause stalls.
 
-The target frame is calculated from elapsed monotonic clock ticks:
+Deadlines use the absolute 30 FPS timeline. They are computed once per frame
+and shifted when resuming from pause. Obsolete source frames are reconstructed
+but skipped before rendering. Once rendered, a frame is presented even if late.
+The first presentation starts the timeline; the final frame is held for its
+full period. Deadline arithmetic uses wrap-safe signed differences.
 
-```text
-target = floor((now - timeline_start) × 30 / CLOCKS_PER_SEC)
-```
+## Performance measurements
 
-When a segment or delta is already behind that target, the runtime reconstructs
-the delta state but does not render the obsolete frame. Once a frame is chosen
-for rendering, it is always presented after rendering finishes, even if that
-render crossed the next deadline. This rule prevents a slow render path from
-discarding every frame and leaving the cleared white buffer visible.
+After each swap, `gfx_Wait` completes before the clock sample. The player
+records software-observed presentation intervals, excludes intervals spanning
+pauses, and keeps the largest 100 intervals in a 400-byte min-heap. This suffices
+for the worst 1% of at most 9999 intervals allowed by metadata. On completion
+or Mode, it reports the inverse mean of the slowest ceil(N/100) intervals,
+worst interval, sample count, skipped frames, late renders and buffer starvation.
+The calculation runs after playback, not during rendering. Clear and ON remain
+immediate exits without statistics. Press a fresh key to dismiss the report.
 
-The result prioritizes continuity of real time over displaying every source
-frame. It cannot hide a long blocking storage operation completely; a future
-prefetch ring buffer could reduce that remaining stall.
+The target is a measured 1% low of at least 29 FPS, with no isolated stalls;
+see [the performance plan](PERFORMANCE_PLAN.md). No physical result is implied
+by a successful host test or build. LCD scanout and software sampling are not
+identical, so visual acceptance remains necessary.
 
 ## Controls and cleanup
 
 - `2nd` toggles pause/resume.
-- `Mode` quits to TI-OS.
+- `Mode` opens the timing report; a fresh key quits to TI-OS.
 - `Clear` quits to TI-OS.
 - `ON` quits to TI-OS.
 
