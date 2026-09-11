@@ -12,7 +12,9 @@
 - Previous program backup: `work/BAD30-before.8xp` (ignored local artifact).
 - Host validation: 56 incremental ZX7 round trips across four work budgets,
   truncation/declared-size failures, 2000 malformed streams with output guards,
-  and exact slowest-1% heap comparison at several sample counts up to 9999.
+  exact slowest-1% heap comparison at several sample counts up to 9999,
+  and actual renderer checks across alternating buffers, including borders
+  and changing black/white/random frames.
 - Build passes. CEdev's linker emits executable-stack warnings for eZ80
   assembly objects; there are no compiler warnings from the player.
 

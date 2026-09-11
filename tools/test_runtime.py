@@ -39,6 +39,25 @@ uint64_t tail_sum(const uint32_t *values, uint16_t n) {
     return sum;
 }
 '''
+# Compile the actual LUT builder and renderer against a host framebuffer.
+renderer = main[main.index('static void build_expand_lut'):main.index('static bool load_metadata')]
+wrapper += """
+#define FRAME_WIDTH 96
+#define FRAME_HEIGHT 64
+#define SCALE 3
+#define GFX_LCD_WIDTH 320
+#define SCREEN_X 16
+#define SCREEN_Y 24
+#define PALETTE_BLACK 0
+#define PALETTE_WHITE 255
+static uint8_t expand_lut[256][24];
+static uint8_t *gfx_vbuffer;
+static void gfx_Wait(void) {}
+""" + renderer + """
+void draw(uint8_t *buffer, const uint8_t *frame) {
+    gfx_vbuffer=buffer; build_expand_lut(); render_frame(frame);
+}
+"""
 convbin = Path(sys.argv[1]).resolve()
 rng=random.Random(30)
 with tempfile.TemporaryDirectory() as d:
@@ -48,6 +67,20 @@ with tempfile.TemporaryDirectory() as d:
     lib.decode.argtypes=[ctypes.c_void_p,ctypes.c_uint16,ctypes.c_void_p,ctypes.c_uint16,ctypes.c_uint16]
     lib.decode.restype=ctypes.c_int
     lib.tail_sum.argtypes=[ctypes.c_void_p,ctypes.c_uint16];lib.tail_sum.restype=ctypes.c_uint64
+    lib.draw.argtypes=[ctypes.c_void_p,ctypes.c_void_p]
+    # Reuse both buffers across changing frames to catch stale pixels/borders.
+    buffers=[ctypes.create_string_buffer(bytes([255])*(320*240)) for _ in range(2)]
+    for frame_index in range(8):
+        frame=bytes([0 if frame_index%3==0 else 255])*768 if frame_index%3!=2 else bytes(rng.randrange(256) for _ in range(768))
+        buffer=buffers[frame_index%2]
+        lib.draw(buffer,frame)
+        expected=bytearray([255])*(320*240)
+        for y in range(64):
+            row=bytes(c for x in range(96) for c in [0 if frame[y*12+x//8] & (128>>(x%8)) else 255]*3)
+            for dy in range(3):
+                start=(24+y*3+dy)*320+16
+                expected[start:start+288]=row
+        assert buffer.raw[:320*240]==expected
     cases=[]
     for n in [768,1536,7680]:
         cases += [bytes(n),bytes([255])*n,bytes(rng.randrange(2) for _ in range(n)),bytes(i%251 for i in range(n))]
@@ -83,4 +116,4 @@ with tempfile.TemporaryDirectory() as d:
         out=ctypes.create_string_buffer(784);ctypes.memset(out,0xA5,784)
         lib.decode(packed,len(packed),out,768,7)
         assert out.raw[768:]==bytes([0xA5])*16
-    print(f'PASS: {checks} decoder round trips, truncation/size checks, 2000 malformed streams, exact 1% heap checks')
+    print(f'PASS: {checks} decoder round trips, truncation/size checks, 2000 malformed streams, exact 1% heap checks, alternating-buffer renderer checks')
