@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('encoder', ROOT / 'tools/encode_bad30.py')
 encoder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(encoder)
+assert encoder.FPS == 29, f"encoder FPS drifted to {encoder.FPS}; expected 29"
 main = (ROOT / 'src/main.c').read_text()
-table = re.search(r'static const uint16_t crc16_table\[256\] = \{.*?\};', main, re.S).group()
+table = re.search(r'const uint16_t crc16_table\[256\] = \{.*?\};', main, re.S).group()
 heap = main[main.index('static void record_interval'):main.index('static void show_statistics')]
 wrapper = '''#include <stdint.h>
 #include <stdlib.h>
@@ -116,4 +117,4 @@ with tempfile.TemporaryDirectory() as d:
         out=ctypes.create_string_buffer(784);ctypes.memset(out,0xA5,784)
         lib.decode(packed,len(packed),out,768,7)
         assert out.raw[768:]==bytes([0xA5])*16
-    print(f'PASS: {checks} decoder round trips, truncation/size checks, 2000 malformed streams, exact 1% heap checks, alternating-buffer renderer checks')
+    print(f'PASS: 29 FPS encoder setting, {checks} decoder round trips, truncation/size checks, 2000 malformed streams, exact 1% heap checks, alternating-buffer renderer checks')

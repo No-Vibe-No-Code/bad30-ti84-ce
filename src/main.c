@@ -21,7 +21,7 @@
 #define SCREEN_X ((GFX_LCD_WIDTH - FRAME_WIDTH * SCALE) / 2)
 #define SCREEN_Y ((GFX_LCD_HEIGHT - FRAME_HEIGHT * SCALE) / 2)
 
-#define VIDEO_FPS 30
+#define VIDEO_FPS 29
 #define FRAMES_PER_SEGMENT 10
 #define MAX_SEGMENTS 1000
 #define MAX_METADATA_BYTES 8192
@@ -55,7 +55,7 @@ static uint16_t interval_count;
 static uint8_t heap_size;
 static uint32_t displayed_frames;
 
-static const uint16_t crc16_table[256] = {
+const uint16_t crc16_table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
     0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
     0x1231, 0x0210, 0x3273, 0x2252, 0x52B5, 0x4294, 0x72F7, 0x62D6,
@@ -105,7 +105,7 @@ static uint16_t crc16_ccitt(const uint8_t *data, uint16_t length) {
     uint16_t crc = 0xFFFF;
 
     for (uint16_t i = 0; i < length; ++i) {
-        crc = (uint16_t)((crc << 8) ^ crc16_table[(crc >> 8) ^ data[i]]);
+        crc = (uint16_t)(((uint32_t)crc << 8) ^ crc16_table[(crc >> 8) ^ data[i]]);
     }
 
     return crc;
@@ -321,7 +321,7 @@ static bool begin_prefetch(uint16_t segment, uint8_t slot) {
 
 static bool prefetch_step(void) {
     if (!prefetch_active) return true;
-    zx7_step(&prefetch, 32, crc16_table);
+    zx7_step(&prefetch, 128, crc16_table);
     if (prefetch.failed || prefetch.done) {
         ti_Close(prefetch_handle);
         prefetch_handle = 0;
@@ -339,8 +339,8 @@ static bool prefetch_step(void) {
 
 static bool poll_controls(bool *paused, bool *previous_2nd,
                           clock_t *timeline_start, clock_t *pause_started) {
-    kb_Scan();
-
+    /* Continuous mode already refreshes kb_Data. A synchronous kb_Scan
+     * here restarts a complete hardware scan for every decoder batch. */
     if (kb_On || (kb_Data[1] & kb_Mode) || (kb_Data[6] & kb_Clear)) {
         return false;
     }

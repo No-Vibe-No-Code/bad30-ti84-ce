@@ -4,7 +4,7 @@
 
 The host encoder converts the selected video into a deterministic stream:
 
-1. `ffmpeg` normalizes the source to constant-rate 30 FPS.
+1. `ffmpeg` normalizes the source to constant-rate 29 FPS.
 2. The image is scaled and letterboxed into exactly 96×64 pixels.
 3. Pixels below grayscale value 128 become black; all others become white.
 4. Each row is packed bit-first into 12 bytes, for 768 bytes per frame.
@@ -31,7 +31,7 @@ The metadata header is little-endian:
 2 bytes   frame width: 96
 2 bytes   frame height: 64
 1 byte    scale: 3
-1 byte    frame rate: 30
+1 byte    frame rate: 29
 4 bytes   total frame count
 2 bytes   frames per segment: 10
 2 bytes   segment count
@@ -79,7 +79,7 @@ two-millisecond guard. Token parsing is bounded, but the guard and batch size
 still require physical performance testing. Opening an AppVar remains a
 synchronous operation, and insufficient spare CPU time can still cause stalls.
 
-Deadlines use the absolute 30 FPS timeline. They are computed once per frame
+Deadlines use the absolute 29 FPS timeline. They are computed once per frame
 and shifted when resuming from pause. Obsolete source frames are reconstructed
 but skipped before rendering. Once rendered, a frame is presented even if late.
 The first presentation starts the timeline; the final frame is held for its

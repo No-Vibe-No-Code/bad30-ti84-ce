@@ -11,8 +11,8 @@ Implementation:
    each frame. Expand each row once, then copy two complete rows.
 2. Keep two decoded segments. Prepare the next segment in small, bounded
    ZX7 output batches while waiting for presentation; update its CRC during
-   decoding. Check all input, output and back-reference bounds. Preserve the
-   existing version-1 package, so installed video data needs no conversion.
+   decoding. Check all input, output and back-reference bounds. Regenerate the
+   AppVars at 29 FPS so metadata and playback timing agree.
 3. Preload before starting the clock. Calculate deadlines once per frame,
    retain pause-aware absolute pacing, and reserve a deadline guard for
    background work. Late frames remain skippable; buffer starvation must be

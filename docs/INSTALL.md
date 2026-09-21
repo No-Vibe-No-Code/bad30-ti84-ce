@@ -11,7 +11,7 @@ version of Bad Apple to this calculator.
 3. Download the source video to a build-only location. Do not commit the video.
 4. Run `tools/encode_bad30.py` with the source path, an output directory, and
    the CEdev `convbin` path.
-5. Confirm that `manifest.json` reports the expected frame count, 30 FPS,
+5. Confirm that `manifest.json` reports the expected frame count, 29 FPS,
    96×64 dimensions, and a successful encoder exit.
 6. Run `make` and confirm that `bin/BAD30.8xp` is produced.
 

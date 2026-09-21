@@ -22,7 +22,7 @@ import tempfile
 WIDTH = 96
 HEIGHT = 64
 SCALE = 3
-FPS = 30
+FPS = 29
 FRAME_BYTES = WIDTH * HEIGHT // 8
 FRAMES_PER_SEGMENT = 10
 MAX_SEGMENT_RAW = FRAME_BYTES * FRAMES_PER_SEGMENT
@@ -141,7 +141,7 @@ def pack_frame(gray: bytes) -> bytes:
 
 def read_frames(source: Path) -> list[bytes]:
     filter_graph = (
-        "fps=30,"
+        f"fps={FPS},"
         "scale=96:64:force_original_aspect_ratio=decrease:flags=lanczos,"
         "pad=96:64:(ow-iw)/2:(oh-ih)/2:color=white,"
         "format=gray"

@@ -4,11 +4,16 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __TICE__
+extern unsigned int bad30_copy_crc(void *destination, const void *source,
+                                   unsigned int count, unsigned int crc);
+#endif
+
 /* A bounded, resumable reader for the existing convbin ZX7 format. */
 typedef struct {
     const uint8_t *input;
     uint8_t *output;
-    uint16_t input_size, output_size, in, out, remaining, distance, crc;
+    unsigned int input_size, output_size, in, out, remaining, distance, crc;
     uint8_t bits;
     bool failed, done;
 } zx7_stream;
@@ -19,12 +24,12 @@ static uint8_t zx7_byte(zx7_stream *s) {
 }
 
 static uint8_t zx7_bit(zx7_stream *s) {
-    uint8_t carry = s->bits >> 7;
+    uint8_t carry = (s->bits >= 128);
     s->bits <<= 1;
     if (!s->bits) {
         uint8_t value = zx7_byte(s);
         s->bits = (uint8_t)((value << 1) | carry);
-        carry = value >> 7;
+        carry = (value >= 128);
     }
     return carry;
 }
@@ -39,8 +44,8 @@ static void zx7_begin(zx7_stream *s, const uint8_t *input, uint16_t input_size,
 
 /* At most budget output bytes, plus a bounded (<=16-bit) token parse.
  * CRC is fused with output so there is no full-segment verification stall. */
-static void zx7_step(zx7_stream *s, uint16_t budget, const uint16_t *crc_table) {
-    while (budget-- && !s->done && !s->failed) {
+static void zx7_step_local(zx7_stream *s, uint16_t budget, const uint16_t *crc_table) {
+    while (budget && !s->done && !s->failed) {
         uint8_t value;
         if (!s->remaining) {
             if (s->out && zx7_bit(s)) {
@@ -52,9 +57,9 @@ static void zx7_step(zx7_stream *s, uint16_t budget, const uint16_t *crc_table) 
                         return;
                     }
                 }
-                uint16_t length = 1;
+                unsigned int length = 1;
                 for (uint8_t i = 0; i < zeros; ++i)
-                    length = (uint16_t)((length << 1) | zx7_bit(s));
+                    length = (length << 1) | zx7_bit(s);
                 /* length+1 must fit and stay within the declared output. */
                 if (s->failed || length >= s->output_size - s->out) {
                     s->failed = true; return;
@@ -81,11 +86,38 @@ static void zx7_step(zx7_stream *s, uint16_t budget, const uint16_t *crc_table) 
         if (s->failed || s->out >= s->output_size) {
             s->failed = true; return;
         }
-        value = s->distance ? s->output[s->out - s->distance] : zx7_byte(s);
-        if (s->failed) return;
-        s->output[s->out++] = value;
-        s->crc = (uint16_t)((s->crc << 8) ^ crc_table[(s->crc >> 8) ^ value]);
-        --s->remaining;
+        unsigned int count = s->remaining < budget ? s->remaining : budget;
+        if (count > 255) count = 255;
+        uint8_t *destination = s->output + s->out;
+        unsigned int crc = s->crc;
+        if (s->distance) {
+            const uint8_t *source = destination - s->distance;
+            /* Forward copy deliberately permits overlapping matches. Keep
+             * state in locals, then publish it once per batch. */
+#ifdef __TICE__
+            crc = bad30_copy_crc(destination, source, count, crc);
+#else
+            for (unsigned int i = 0; i < count; ++i) {
+                value = *source++;
+                *destination++ = value;
+                crc = ((crc << 8) ^ crc_table[(crc >> 8) ^ value]) & 0xffffu;
+            }
+#endif
+        } else {
+            value = zx7_byte(s);
+            if (s->failed) return;
+            *destination = value;
+            crc = ((crc << 8) ^ crc_table[(crc >> 8) ^ value]) & 0xffffu;
+        }
+        s->crc = crc;
+        s->out += count;
+        s->remaining -= count;
+        budget -= count;
     }
+}
+static void zx7_step(zx7_stream *s, uint16_t budget, const uint16_t *crc_table) {
+    zx7_stream local = *s;
+    zx7_step_local(&local, budget, crc_table);
+    *s = local;
 }
 #endif

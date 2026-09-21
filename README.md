@@ -5,7 +5,7 @@ uses a host-side encoder and independently validated AppVar segments, then
 renders complete frames through GraphX double buffering.
 
 The player is designed to prioritize smooth real-time playback. It follows a
-30 FPS wall-clock timeline and skips frames that are already late instead of
+29 FPS wall-clock timeline and skips frames that are already late instead of
 allowing the video to freeze while it catches up. A frame is never presented
 until it has been fully decoded and rendered.
 
@@ -13,7 +13,7 @@ until it has been fully decoded and rendered.
 
 - Native TI-84 Plus CE program (`BAD30.8xp`), not a monochrome `.8xk` file.
 - 96×64 black-and-white source frames expanded to a centered 288×192 image.
-- Constant-rate 30 FPS normalization from the selected Shadow Art PV source.
+- Constant-rate 29 FPS normalization from the selected Shadow Art PV source.
 - Independent 10-frame ZX7-compressed segments to limit blocking storage reads.
 - Complete-frame plus XOR-delta encoding for compact storage.
 - Metadata and per-segment CRC16 integrity checks.
@@ -108,7 +108,7 @@ BAD30 keeps the playback phase tied to the monotonic CE clock. If decoding or
 rendering falls behind, it advances to the current timeline frame and drops
 older frames. This reduces apparent freezing but can produce an occasional
 visual jump. The player does not claim that every physical calculator can
-sustain 30 displayed frames per second; the device's actual behavior remains
+sustain 29 displayed frames per second; the device's actual behavior remains
 the acceptance test.
 
 The existing `BADAPP2` installation is not part of this repository and should

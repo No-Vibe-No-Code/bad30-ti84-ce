@@ -2,7 +2,7 @@
 
 NAME = BAD30
 ICON = icon.png
-DESCRIPTION = "Bad Apple 30FPS player"
+DESCRIPTION = "Bad Apple 29FPS player"
 COMPRESSED = YES
 COMPRESSED_MODE = zx7
 
